@@ -1,17 +1,36 @@
+import logging
 from kafka import KafkaConsumer
 import json
 
-# Kafka Consumer Setup
-consumer = KafkaConsumer(
-    "invoice_events",  # Topic name
-    bootstrap_servers="kafka:9092",  # Kafka container hostname and port
-    value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-    auto_offset_reset="earliest",  # Start consuming from the earliest message
-    group_id="invoice_consumer_group",  # Consumer group ID
-)
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("kafka_consumer")
 
-print("Listening for messages on 'invoice_events' topic...")
+try:
+    # Initialize Kafka consumer
+    consumer = KafkaConsumer(
+        "invoices",
+        bootstrap_servers="kafka:9092",
+        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+        auto_offset_reset="earliest",
+        enable_auto_commit=True,
+        group_id="invoice_consumer_group",
+    )
+    logger.info("Kafka consumer successfully connected and listening...")
+except Exception as e:
+    logger.error(f"Error connecting Kafka consumer: {e}")
+    exit(1)
 
 # Consume messages
-for message in consumer:
-    print(f"Received message: {message.value}")
+try:
+    while True:
+        logger.info("Polling for new messages...")
+        raw_messages = consumer.poll(timeout_ms=1000)
+        for topic_partition, messages in raw_messages.items():
+            for message in messages:
+                logger.info(f"Received message: {message.value}")
+        logger.info("Still waiting for messages...")
+except KeyboardInterrupt:
+    logger.info("Kafka consumer interrupted.")
+except Exception as e:
+    logger.error(f"Error during consumption: {e}")

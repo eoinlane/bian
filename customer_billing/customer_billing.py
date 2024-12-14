@@ -1,10 +1,18 @@
 # customer_billing.py
 from flask import Flask, jsonify, request
+from kafka import KafkaProducer
+import json
 
 app = Flask(__name__)
 
 # Mock database for invoices
 invoices = {}
+
+# Kafka producer setup
+producer = KafkaProducer(
+    bootstrap_servers='kafka:9092',  # Kafka container name from Docker Compose
+    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+)
 
 @app.route("/create", methods=["POST"])
 def create_invoice():
@@ -16,6 +24,16 @@ def create_invoice():
         "status": "Created",
         "due_date": data["due_date"],
     }
+
+        # Send an event to Kafka topic
+    producer.send('invoices', value={
+        "invoice_id": invoice_id,
+        "customer_id": data["customer_id"],
+        "amount": data["amount"],
+        "due_date": data["due_date"],
+        "status": "Created"
+    })
+
     return jsonify({"invoice_id": invoice_id, "message": "Invoice created"}), 201
 
 

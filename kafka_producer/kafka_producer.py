@@ -8,7 +8,7 @@ producer = KafkaProducer(
 
 # Produce an invoice creation event
 producer.send(
-    "invoice_events",
+    "invoices",
     {"event_type": "invoice_created", "invoice_id": 123, "amount": 500.0},
 )
 producer.flush()
